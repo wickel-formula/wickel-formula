@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hydranten- und Schieberüberprüfung</title>
+<style>
+  :root {
+    --input-bg: #ffffcc;
+    --section-bg: #f2f2f2;
+    --border: #999;
+    --accent: #1a5276;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    background: #ffffff;
+    color: #222;
+    margin: 0;
+    padding: 16px;
+    max-width: 720px;
+    margin-inline: auto;
+    font-size: 16px;
+  }
+  h1 {
+    font-size: 1.4rem;
+    color: var(--accent);
+    border-bottom: 2px solid var(--accent);
+    padding-bottom: 8px;
+    margin-bottom: 20px;
+  }
+  h2 {
+    font-size: 1.05rem;
+    margin: 0 0 10px 0;
+    color: var(--accent);
+  }
+  fieldset {
+    border: 1px solid var(--border);
+    background: var(--section-bg);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+  legend {
+    font-weight: bold;
+    font-size: 1.05rem;
+    padding: 0 8px;
+    color: var(--accent);
+  }
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  .field {
+    flex: 1 1 200px;
+  }
+  label.text-label {
+    display: block;
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+  }
+  input[type="text"],
+  input[type="date"],
+  textarea {
+    width: 100%;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 10px 10px;
+    font-size: 1rem;
+    min-height: 44px;
+  }
+  textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+  .check-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 16px;
+  }
+  .check-group {
+    background: #ffffff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 12px 14px;
+  }
+  .check-group h3 {
+    font-size: 0.9rem;
+    margin: 0 0 10px 0;
+    color: #333;
+  }
+  .check-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.95rem;
+    margin-bottom: 10px;
+    min-height: 28px;
+  }
+  .check-item input {
+    margin: 0;
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    accent-color: var(--accent);
+  }
+  .leitungsart {
+    gap: 16px;
+  }
+  .leitungsart label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-right: 4px;
+    font-size: 0.95rem;
+  }
+  .leitungsart label input {
+    width: 24px;
+    height: 24px;
+    accent-color: var(--accent);
+  }
+  button {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 14px 20px;
+    font-size: 1rem;
+    cursor: pointer;
+    margin-right: 10px;
+    margin-top: 10px;
+    min-height: 48px;
+  }
+  button:hover { background: #154360; }
+  button.gefahr {
+    background: #a93226;
+  }
+  button.gefahr:hover {
+    background: #7b241c;
+  }
+  button.sekundaer {
+    background: #777;
+  }
+  button.sekundaer:hover {
+    background: #555;
+  }
+  button:focus-visible, input:focus-visible, textarea:focus-visible {
+    outline: 3px solid #ff9900;
+    outline-offset: 1px;
+  }
+  .actions {
+    margin-top: 24px;
+    border-top: 1px solid var(--border);
+    padding-top: 18px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .actions button {
+    margin-top: 0;
+    margin-right: 0;
+    flex: 1 1 140px;
+  }
+
+  /* Startseite */
+  #ansichtStart .kopfzeile {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  #hydrantenListe {
+    list-style: none;
+    margin: 0 0 20px 0;
+    padding: 0;
+  }
+  #hydrantenListe li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    background: var(--section-bg);
+  }
+  .eintrag-info {
+    flex: 1 1 200px;
+  }
+  .eintrag-info .nr {
+    font-weight: bold;
+    font-size: 1.05rem;
+  }
+  .eintrag-info .meta {
+    font-size: 0.9rem;
+    color: #555;
+    margin-top: 4px;
+  }
+  .status {
+    display: inline-block;
+    font-size: 0.78rem;
+    font-weight: bold;
+    padding: 3px 10px;
+    border-radius: 10px;
+    margin-left: 10px;
+  }
+  .status.offen {
+    background: #fdebd0;
+    color: #9a6400;
+  }
+  .status.fertig {
+    background: #d4efdf;
+    color: #1e7d4a;
+  }
+  .eintrag-aktionen {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .eintrag-aktionen button {
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    margin: 0;
+    min-height: 44px;
+  }
+  #leereListe {
+    color: #666;
+    font-style: italic;
+    margin-bottom: 16px;
+  }
+  .verwaltung {
+    border-top: 1px solid var(--border);
+    padding-top: 14px;
+    margin-top: 10px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ===================== STARTSEITE ===================== -->
+<div id="ansichtStart">
+  <div class="kopfzeile">
+    <h1 style="border:none; margin:0; padding:0;">Hydranten- und Schieberüberprüfung</h1>
+  </div>
+
+  <button type="button" id="btnNeu">+ Neuen Hydranten erfassen</button>
+
+  <div id="leereListe" style="display:none;">Noch keine Hydranten erfasst.</div>
+  <ul id="hydrantenListe"></ul>
+
+  <div class="verwaltung">
+    <button type="button" id="btnAlleExportieren" class="sekundaer">Alle als JSON-Datei exportieren</button>
+    <button type="button" id="btnSpeicherLoeschen" class="gefahr">Gesamten Speicher löschen</button>
+  </div>
+</div>
+
+<!-- ===================== FORMULAR ===================== -->
+<div id="ansichtFormular" style="display:none;">
+
+<h1>Hydranten- und Schieberüberprüfung</h1>
+
+<form id="pruefForm">
+
+  <fieldset>
+    <legend>Allgemeine Angaben</legend>
+    <div class="row">
+      <div class="field">
+        <label class="text-label" for="gemeinde">Stadt / Gemeinde</label>
+        <input type="text" id="gemeinde" name="gemeinde">
+      </div>
+      <div class="field">
+        <label class="text-label" for="datum">Datum</label>
+        <input type="date" id="datum" name="datum">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label class="text-label" for="strasse">Straße, Hs-Nr.</label>
+        <input type="text" id="strasse" name="strasse">
+      </div>
+      <div class="field">
+        <label class="text-label" for="pruefer">Prüfer</label>
+        <input type="text" id="pruefer" name="pruefer">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field" style="flex-basis: 100%;">
+        <label class="text-label" for="lage">Lage</label>
+        <input type="text" id="lage" name="lage">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field" style="flex-basis: 100%;">
+        <label class="text-label" for="gpsKoordinaten">GPS-Koordinaten (WGS84)</label>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <input type="text" id="gpsKoordinaten" name="gpsKoordinaten" placeholder="wird ermittelt..." style="flex:1;">
+          <button type="button" id="btnGpsAktualisieren" style="margin:0; white-space:nowrap; padding:10px 16px;">Aktualisieren</button>
+        </div>
+      </div>
+    </div>
+    <div class="row leitungsart">
+      <label><input type="radio" name="leitungsart" value="Anschlussleitung"> Anschlussleitung</label>
+      <label><input type="radio" name="leitungsart" value="Versorgungsleitung"> Versorgungsleitung</label>
+      <label><input type="radio" name="leitungsart" value="Transportleitung"> Transportleitung</label>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label class="text-label" for="hydrantNr">Hydrant Nr.</label>
+        <input type="text" id="hydrantNr" name="hydrantNr">
+      </div>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Prüfpunkte</legend>
+    <div class="check-grid">
+
+      <div class="check-group">
+        <h3>Straßenkappen</h3>
+        <div class="check-item"><input type="checkbox" name="strassenkappen" value="in Ordnung"><label>in Ordnung</label></div>
+        <div class="check-item"><input type="checkbox" name="strassenkappen" value="zu lang"><label>zu lang</label></div>
+        <div class="check-item"><input type="checkbox" name="strassenkappen" value="zu tief"><label>zu tief</label></div>
+        <div class="check-item"><input type="checkbox" name="strassenkappen" value="entleert nicht"><label>entleert nicht</label></div>
+        <div class="check-item"><input type="checkbox" name="strassenkappen" value="schwergängig"><label>schwergängig</label></div>
+        <div class="check-item"><input type="checkbox" name="strassenkappen" value="Klaue beschädigt/fehlt"><label>Klaue beschädigt/fehlt</label></div>
+      </div>
+
+      <div class="check-group">
+        <h3>Schieber / EBG</h3>
+        <div class="check-item"><input type="checkbox" name="schieberEbg" value="in Ordnung"><label>in Ordnung</label></div>
+        <div class="check-item"><input type="checkbox" name="schieberEbg" value="beschädigt"><label>beschädigt</label></div>
+        <div class="check-item"><input type="checkbox" name="schieberEbg" value="zu hoch"><label>zu hoch</label></div>
+        <div class="check-item"><input type="checkbox" name="schieberEbg" value="zu tief"><label>zu tief</label></div>
+        <div class="check-item"><input type="checkbox" name="schieberEbg" value="Deckel beschädigt"><label>Deckel beschädigt</label></div>
+        <div class="check-item"><input type="checkbox" name="schieberEbg" value="Umrandung defekt"><label>Umrandung defekt</label></div>
+      </div>
+
+      <div class="check-group">
+        <h3>Sonstiges Hydrant</h3>
+        <div class="check-item"><input type="checkbox" name="sonstigesHydrant" value="in Ordnung"><label>in Ordnung</label></div>
+        <div class="check-item"><input type="checkbox" name="sonstigesHydrant" value="zu lang"><label>zu lang</label></div>
+        <div class="check-item"><input type="checkbox" name="sonstigesHydrant" value="Trennschieber"><label>Trennschieber</label></div>
+        <div class="check-item"><input type="checkbox" name="sonstigesHydrant" value="Hydrant erneuern"><label>Hydrant erneuern</label></div>
+        <div class="check-item"><input type="checkbox" name="sonstigesHydrant" value="Hawle"><label>Hawle</label></div>
+        <div class="check-item"><input type="checkbox" name="sonstigesHydrant" value="Endhydrant"><label>Endhydrant</label></div>
+      </div>
+
+      <div class="check-group">
+        <h3>Untergrund</h3>
+        <div class="check-item"><input type="checkbox" name="untergrund" value="Asphalt / Pflaster"><label>Asphalt / Pflaster</label></div>
+        <div class="check-item"><input type="checkbox" name="untergrund" value="Unbefestigt"><label>Unbefestigt</label></div>
+      </div>
+
+      <div class="check-group">
+        <h3>Beschilderung H</h3>
+        <div class="check-item"><input type="checkbox" name="beschilderungH" value="in Ordnung"><label>in Ordnung</label></div>
+        <div class="check-item"><input type="checkbox" name="beschilderungH" value="erneuern"><label>erneuern</label></div>
+        <div style="margin-top:8px; display:flex; flex-direction:column; align-items:center; gap:6px;">
+          <div style="display:flex; align-items:center; gap:4px; width:140px;">
+            <span style="font-weight:bold; color:#333;">H</span>
+            <input type="text" id="beschilderungH_DN" name="beschilderungH_DN" placeholder="DN" style="text-align:center;">
+          </div>
+          <div style="display:flex; gap:6px; width:140px;">
+            <input type="text" id="beschilderungH_links" name="beschilderungH_links" placeholder="links" style="text-align:center; width:50%;">
+            <input type="text" id="beschilderungH_rechts" name="beschilderungH_rechts" placeholder="rechts" style="text-align:center; width:50%;">
+          </div>
+          <input type="text" id="beschilderungH_vorne" name="beschilderungH_vorne" placeholder="vorne" style="text-align:center; width:140px;">
+        </div>
+      </div>
+
+      <div class="check-group">
+        <h3>Schilderpfosten</h3>
+        <div class="check-item"><input type="checkbox" name="schilderpfosten" value="in Ordnung"><label>in Ordnung</label></div>
+        <div class="check-item"><input type="checkbox" name="schilderpfosten" value="erneuern"><label>erneuern</label></div>
+        <div class="check-item"><input type="checkbox" name="schilderpfosten" value="Rohrpfosten"><label>Rohrpfosten</label></div>
+        <div class="check-item"><input type="checkbox" name="schilderpfosten" value="Wandbefestigung"><label>Wandbefestigung</label></div>
+        <div class="check-item"><input type="checkbox" name="schilderpfosten" value="Bandbefestigung"><label>Bandbefestigung</label></div>
+      </div>
+
+      <div class="check-group">
+        <h3>Beschilderung KOS</h3>
+        <div class="check-item"><input type="checkbox" name="beschilderungKos" value="in Ordnung"><label>in Ordnung</label></div>
+        <div class="check-item"><input type="checkbox" name="beschilderungKos" value="erneuern"><label>erneuern</label></div>
+        <div style="margin-top:8px; display:flex; flex-direction:column; align-items:center; gap:6px;">
+          <div style="display:flex; align-items:center; gap:4px; width:140px;">
+            <span style="font-weight:bold; color:#333;">S</span>
+            <input type="text" id="beschilderungKos_DN" name="beschilderungKos_DN" placeholder="DN" style="text-align:center;">
+          </div>
+          <div style="display:flex; gap:6px; width:140px;">
+            <input type="text" id="beschilderungKos_links" name="beschilderungKos_links" placeholder="links" style="text-align:center; width:50%;">
+            <input type="text" id="beschilderungKos_rechts" name="beschilderungKos_rechts" placeholder="rechts" style="text-align:center; width:50%;">
+          </div>
+          <input type="text" id="beschilderungKos_vorne" name="beschilderungKos_vorne" placeholder="vorne" style="text-align:center; width:140px;">
+        </div>
+      </div>
+
+      <div class="check-group">
+        <h3>Planwerk</h3>
+        <div class="check-item"><input type="checkbox" name="planwerk" value="fehlt im Plan"><label>fehlt im Plan</label></div>
+        <div class="check-item"><input type="checkbox" name="planwerk" value="GIS-Nr. fehlt"><label>GIS-Nr. fehlt</label></div>
+        <div class="check-item"><input type="checkbox" name="planwerk" value="Unstimmigkeit im Plan"><label>Unstimmigkeit im Plan</label></div>
+        <div class="check-item"><input type="checkbox" name="planwerk" value="Foto"><label>Foto</label></div>
+      </div>
+
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Bemerkung</legend>
+    <textarea id="bemerkung" name="bemerkung"></textarea>
+  </fieldset>
+
+  <div class="actions">
+    <button type="button" id="btnSpeichern">Speichern</button>
+    <button type="button" id="btnDownload">Als JSON-Datei speichern</button>
+    <button type="button" id="btnZurueck" class="sekundaer">Zurück zur Übersicht</button>
+  </div>
+
+</form>
+
+</div>
+
+<script>
+/* ===================== IndexedDB ===================== */
+const DB_NAME = 'hydrantenPruefungDB';
+const DB_VERSION = 1;
+const STORE_NAME = 'hydranten';
+let db = null;
+let aktuelleId = null; // ID des gerade bearbeiteten Datensatzes, null = neu
+
+function dbOeffnen() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onupgradeneeded = function(event) {
+      const datenbank = event.target.result;
+      if (!datenbank.objectStoreNames.contains(STORE_NAME)) {
+        const store = datenbank.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+        store.createIndex('status', 'status', { unique: false });
+      }
+    };
+    request.onsuccess = function(event) {
+      db = event.target.result;
+      resolve(db);
+    };
+    request.onerror = function(event) {
+      reject(event.target.error);
+    };
+  });
+}
+
+function alleDatensaetzeLesen() {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+    const request = store.getAll();
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+function datensatzLesen(id) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+    const request = store.get(id);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+function datensatzSpeichern(daten) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    const request = daten.id ? store.put(daten) : store.add(daten);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+function datensatzLoeschen(id) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    const request = store.delete(id);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
+
+function speicherLoeschen() {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    const request = store.clear();
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
+
+/* ===================== Ansichtswechsel ===================== */
+function zeigeStartansicht() {
+  document.getElementById('ansichtFormular').style.display = 'none';
+  document.getElementById('ansichtStart').style.display = 'block';
+  ladeHydrantenListe();
+}
+
+function zeigeFormularansicht() {
+  document.getElementById('ansichtStart').style.display = 'none';
+  document.getElementById('ansichtFormular').style.display = 'block';
+}
+
+/* ===================== Startseite: Liste rendern ===================== */
+async function ladeHydrantenListe() {
+  const liste = document.getElementById('hydrantenListe');
+  const leerHinweis = document.getElementById('leereListe');
+  const datensaetze = await alleDatensaetzeLesen();
+
+  // Neueste zuerst (nach id absteigend)
+  datensaetze.sort((a, b) => b.id - a.id);
+
+  liste.innerHTML = '';
+
+  if (datensaetze.length === 0) {
+    leerHinweis.style.display = 'block';
+    return;
+  }
+  leerHinweis.style.display = 'none';
+
+  datensaetze.forEach(d => {
+    const li = document.createElement('li');
+
+    const info = document.createElement('div');
+    info.className = 'eintrag-info';
+    const statusKlasse = d.status === 'fertig' ? 'fertig' : 'offen';
+    const statusText = d.status === 'fertig' ? 'fertig' : 'offen';
+    info.innerHTML =
+      '<span class="nr">Hydrant ' + (d.hydrantNr || '(ohne Nr.)') + '</span>' +
+      '<span class="status ' + statusKlasse + '">' + statusText + '</span>' +
+      '<div class="meta">' + (d.datum || '') + (d.gemeinde ? ' · ' + d.gemeinde : '') +
+      (d.strasse ? ' · ' + d.strasse : '') + '</div>';
+
+    const aktionen = document.createElement('div');
+    aktionen.className = 'eintrag-aktionen';
+
+    const btnBearbeiten = document.createElement('button');
+    btnBearbeiten.textContent = 'Bearbeiten';
+    btnBearbeiten.addEventListener('click', () => hydrantenBearbeiten(d.id));
+
+    const btnDownload = document.createElement('button');
+    btnDownload.textContent = 'JSON herunterladen';
+    btnDownload.className = 'sekundaer';
+    btnDownload.addEventListener('click', () => datensatzHerunterladen(d));
+
+    const btnLoeschen = document.createElement('button');
+    btnLoeschen.textContent = 'Löschen';
+    btnLoeschen.className = 'gefahr';
+    btnLoeschen.addEventListener('click', async () => {
+      const bestaetigt = confirm('Hydrant ' + (d.hydrantNr || '(ohne Nr.)') + ' wirklich löschen?');
+      if (bestaetigt) {
+        await datensatzLoeschen(d.id);
+        ladeHydrantenListe();
+      }
+    });
+
+    aktionen.appendChild(btnBearbeiten);
+    aktionen.appendChild(btnDownload);
+    aktionen.appendChild(btnLoeschen);
+
+    li.appendChild(info);
+    li.appendChild(aktionen);
+    liste.appendChild(li);
+  });
+}
+
+async function hydrantenBearbeiten(id) {
+  const daten = await datensatzLesen(id);
+  aktuelleId = id;
+  formularBefuellen(daten);
+  zeigeFormularansicht();
+}
+
+document.getElementById('btnNeu').addEventListener('click', () => {
+  aktuelleId = null;
+  formularLeeren();
+  zeigeFormularansicht();
+});
+
+document.getElementById('btnAlleExportieren').addEventListener('click', async () => {
+  const datensaetze = await alleDatensaetzeLesen();
+  if (datensaetze.length === 0) {
+    alert('Es sind keine Hydranten gespeichert.');
+    return;
+  }
+
+  const exportListe = datensaetze.map(d => {
+    const exportDaten = {};
+    GRUNDFELDER.forEach(f => exportDaten[f] = d[f] || '');
+    KATEGORIEN.forEach(k => exportDaten[k] = d[k] || []);
+    exportDaten.status = d.status || 'offen';
+    return exportDaten;
+  });
+
+  const json = JSON.stringify(exportListe, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'hydrantenpruefungen_alle_' + new Date().toISOString().slice(0,10) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('btnSpeicherLoeschen').addEventListener('click', async () => {
+  const bestaetigt = confirm('Wirklich ALLE gespeicherten Hydranten löschen? Dies kann nicht rückgängig gemacht werden.');
+  if (bestaetigt) {
+    await speicherLoeschen();
+    ladeHydrantenListe();
+  }
+});
+
+/* ===================== Formular: Befüllen / Leeren ===================== */
+const GRUNDFELDER = ['gemeinde','datum','strasse','pruefer','lage','gpsKoordinaten','hydrantNr','bemerkung',
+  'beschilderungH_DN','beschilderungH_links','beschilderungH_rechts','beschilderungH_vorne',
+  'beschilderungKos_DN','beschilderungKos_links','beschilderungKos_rechts','beschilderungKos_vorne'];
+const KATEGORIEN = [
+  'leitungsart','strassenkappen','schieberEbg','sonstigesHydrant',
+  'untergrund','beschilderungH','schilderpfosten','beschilderungKos','planwerk'
+];
+
+function formularLeeren() {
+  const form = document.getElementById('pruefForm');
+  form.reset();
+  document.getElementById('datum').value = new Date().toISOString().slice(0,10);
+  document.getElementById('gpsKoordinaten').value = '';
+  gpsAktualisieren();
+}
+
+function formularBefuellen(daten) {
+  const form = document.getElementById('pruefForm');
+  form.reset();
+
+  GRUNDFELDER.forEach(feld => {
+    const el = document.getElementById(feld);
+    if (el) el.value = daten[feld] || '';
+  });
+
+  KATEGORIEN.forEach(kategorie => {
+    const werte = daten[kategorie] || [];
+    form.querySelectorAll('input[name="' + kategorie + '"]').forEach(cb => {
+      cb.checked = werte.includes(cb.value);
+    });
+  });
+}
+
+function sammleDaten() {
+  const form = document.getElementById('pruefForm');
+  const daten = {};
+
+  GRUNDFELDER.forEach(feld => {
+    daten[feld] = document.getElementById(feld).value;
+  });
+
+  KATEGORIEN.forEach(name => {
+    const checked = Array.from(form.querySelectorAll('input[name="' + name + '"]:checked'))
+      .map(cb => cb.value);
+    daten[name] = checked;
+  });
+
+  return daten;
+}
+
+function erzeugeDateiname(daten) {
+  const hydrant = daten.hydrantNr ? daten.hydrantNr.replace(/[^a-zA-Z0-9_-]/g, '') : 'ohne_nr';
+  const datum = daten.datum || new Date().toISOString().slice(0,10);
+  return 'hydrant_' + hydrant + '_' + datum + '.json';
+}
+
+function datensatzHerunterladen(daten) {
+  const exportDaten = {};
+  GRUNDFELDER.forEach(f => exportDaten[f] = daten[f] || '');
+  KATEGORIEN.forEach(k => exportDaten[k] = daten[k] || []);
+
+  const json = JSON.stringify(exportDaten, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = erzeugeDateiname(daten);
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/* ===================== GPS ===================== */
+function gpsAktualisieren() {
+  const feld = document.getElementById('gpsKoordinaten');
+  if (!navigator.geolocation) {
+    feld.placeholder = 'Geolocation nicht verfügbar';
+    return;
+  }
+  feld.placeholder = 'wird ermittelt...';
+  navigator.geolocation.getCurrentPosition(
+    function(position) {
+      const lat = position.coords.latitude.toFixed(6);
+      const lon = position.coords.longitude.toFixed(6);
+      feld.value = lat + ', ' + lon;
+    },
+    function(error) {
+      feld.placeholder = 'Position nicht verfügbar (Berechtigung erteilt?)';
+    },
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+}
+document.getElementById('btnGpsAktualisieren').addEventListener('click', gpsAktualisieren);
+
+/* ===================== Formular-Aktionen ===================== */
+async function aktuellenStandSpeichern(status) {
+  const daten = sammleDaten();
+  daten.status = status;
+  if (aktuelleId !== null) {
+    daten.id = aktuelleId;
+  }
+  const neueId = await datensatzSpeichern(daten);
+  aktuelleId = neueId;
+  return daten;
+}
+
+document.getElementById('btnSpeichern').addEventListener('click', async () => {
+  await aktuellenStandSpeichern('offen');
+  alert('Zwischenstand gespeichert.');
+});
+
+document.getElementById('btnDownload').addEventListener('click', () => {
+  const daten = sammleDaten();
+  datensatzHerunterladen(daten);
+});
+
+document.getElementById('btnZurueck').addEventListener('click', async () => {
+  await aktuellenStandSpeichern('fertig');
+  zeigeStartansicht();
+});
+
+/* ===================== Start ===================== */
+dbOeffnen().then(() => {
+  zeigeStartansicht();
+});
+</script>
+
+</body>
+</html>

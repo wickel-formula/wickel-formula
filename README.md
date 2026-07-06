@@ -1,5 +1,5 @@
 ## Formularsammlung
-## Stand: 06.07.2026 07:15
+## Stand: 06.07.2026 07.15
 
 [Formular Hydrantenprüfung](./hydranten_pruefung.html)
 

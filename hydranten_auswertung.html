@@ -177,18 +177,11 @@
 
 <fieldset>
   <legend>1. Daten laden</legend>
-  <p class="hinweis">Du kannst einzelne Hydranten-Dateien und/oder eine Gesamt-Exportdatei gleichzeitig auswählen – das Tool erkennt automatisch, ob eine Datei einen einzelnen Hydranten oder eine Liste mehrerer Hydranten enthält.</p>
-  <div class="lade-optionen">
-    <div class="lade-box">
-      <h3>Einzelne Hydranten-Dateien</h3>
-      <p>z. B. hydrant_12_2026-06-30.json – Mehrfachauswahl möglich</p>
-      <input type="file" id="dateiEinzeln" accept="application/json,.json" multiple>
-    </div>
-    <div class="lade-box">
-      <h3>Gesamtdatei / Export</h3>
-      <p>z. B. hydrantenpruefungen_alle_2026-06-30.json (Liste aller Hydranten)</p>
-      <input type="file" id="dateiGesamt" accept="application/json,.json" multiple>
-    </div>
+  <p class="hinweis">Wähle eine oder mehrere JSON-Dateien aus – einzelne Hydranten-Dateien und/oder eine Gesamt-Exportdatei können gemischt ausgewählt werden. Das Tool erkennt automatisch, ob eine Datei einen einzelnen Hydranten oder eine Liste mehrerer Hydranten enthält.</p>
+  <div class="lade-box" style="max-width:420px;">
+    <h3>JSON-Dateien auswählen</h3>
+    <p>Einzeldateien (z. B. hydrant_12_2026-06-30.json) und/oder eine Gesamtdatei (z. B. hydrantenpruefungen_alle_2026-06-30.json)</p>
+    <input type="file" id="dateiLaden" accept="application/json,.json" multiple>
   </div>
   <div id="status"></div>
 </fieldset>
@@ -706,11 +699,7 @@ async function dateienEinlesen(fileList) {
   }
 }
 
-document.getElementById('dateiEinzeln').addEventListener('change', (e) => {
-  dateienEinlesen(e.target.files);
-  e.target.value = '';
-});
-document.getElementById('dateiGesamt').addEventListener('change', (e) => {
+document.getElementById('dateiLaden').addEventListener('change', (e) => {
   dateienEinlesen(e.target.files);
   e.target.value = '';
 });
@@ -878,6 +867,14 @@ document.getElementById('btnExcelExport').addEventListener('click', () => {
 });
 
 /* ===================== PDF-Export (einzelner Hydrant) ===================== */
+function formatDatum(iso) {
+  if (!iso || typeof iso !== 'string') return '';
+  const teile = iso.split('-');
+  if (teile.length !== 3) return iso;
+  const [jahr, monat, tag] = teile;
+  return tag + '.' + monat + '.' + jahr;
+}
+
 function pdfExportieren(d) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
@@ -885,7 +882,8 @@ function pdfExportieren(d) {
   const rand = 14;
   const nutzbreite = seitenBreite - 2 * rand;
   const accent = [26, 82, 118];
-  const grau = [80, 80, 80];
+  const grau = [110, 110, 110];
+  const eingabeGrenze = [150, 150, 150];
   let y = rand;
 
   function seitenUmbruchPruefen(hoeheBenoetigt) {
@@ -895,64 +893,73 @@ function pdfExportieren(d) {
     }
   }
 
-  // Titel
+  // Kopfzeile: Titel klein, Hydrant-Nr. prominent in eigener Box
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(...accent);
+  doc.text('Hydranten- und Schieberüberprüfung', rand, y + 2);
+  y += 8;
+
+  doc.setDrawColor(...accent);
+  doc.setLineWidth(0.4);
+  doc.roundedRect(rand, y, nutzbreite, 13, 1.5, 1.5, 'S');
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(...grau);
+  doc.text('HYDRANT NR.', rand + 5, y + 5.5);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(15);
   doc.setTextColor(...accent);
-  doc.text('Hydranten- und Schieberüberprüfung', rand, y);
-  y += 3;
-  doc.setDrawColor(...accent);
-  doc.setLineWidth(0.6);
-  doc.line(rand, y, seitenBreite - rand, y);
-  y += 8;
-
-  // Allgemeine Angaben
-  doc.setFontSize(11);
-  doc.setTextColor(...accent);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Allgemeine Angaben', rand, y);
-  y += 6;
-
-  const allgemein = [
-    ['Stadt / Gemeinde', d.gemeinde, 'Datum', d.datum],
-    ['Straße, Hs-Nr.', d.strasse, 'Prüfer', d.pruefer],
-    ['Lage', d.lage, '', ''],
-    ['GPS-Koordinaten', d.gpsKoordinaten, 'Leitungsart', (d.leitungsart && d.leitungsart[0]) || ''],
-    ['Hydrant Nr.', d.hydrantNr, 'Status', d.status]
-  ];
+  doc.text(d.hydrantNr && String(d.hydrantNr).trim() !== '' ? String(d.hydrantNr) : '(ohne Nr.)', rand + 5, y + 11);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9.5);
+  doc.setFontSize(9);
+  doc.setTextColor(40, 40, 40);
+  if (d.datum) doc.text('Datum: ' + formatDatum(d.datum), seitenBreite - rand - 5, y + 8, { align: 'right' });
+  y += 13 + 5;
+
+  const allgemein = [
+    ['Stadt / Gemeinde', d.gemeinde, 'Prüfer', d.pruefer],
+    ['Straße, Hs-Nr.', d.strasse, 'Leitungsart', (d.leitungsart && d.leitungsart[0]) || ''],
+    ['Lage', d.lage, 'GPS-Koordinaten', d.gpsKoordinaten]
+  ];
+
   const spalteBreite = nutzbreite / 2;
+  const feldHoehe = 9;
   allgemein.forEach(zeile => {
-    zeichneFeld(zeile[0], zeile[1], rand, y, spalteBreite - 4);
-    if (zeile[2]) zeichneFeld(zeile[2], zeile[3], rand + spalteBreite, y, spalteBreite - 4);
-    y += 8;
+    zeichneEingabefeld(zeile[0], zeile[1], rand, y, spalteBreite - 4, feldHoehe);
+    if (zeile[2]) zeichneEingabefeld(zeile[2], zeile[3], rand + spalteBreite, y, spalteBreite - 4, feldHoehe);
+    y += feldHoehe + 2;
   });
 
-  function zeichneFeld(label, wert, x, yPos, breite) {
+  function zeichneEingabefeld(label, wert, x, yPos, breite, hoehe) {
+    doc.setDrawColor(...eingabeGrenze);
+    doc.setLineWidth(0.25);
+    doc.roundedRect(x, yPos, breite, hoehe, 1, 1, 'S');
     doc.setTextColor(...grau);
-    doc.setFontSize(7.5);
-    doc.text(label, x, yPos);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6.5);
+    doc.text(label, x + 2.5, yPos + 3.3);
     doc.setTextColor(20, 20, 20);
-    doc.setFontSize(9.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
     const text = wert && String(wert).trim() !== '' ? String(wert) : '–';
-    doc.text(text, x, yPos + 4, { maxWidth: breite });
+    doc.text(text, x + 2.5, yPos + 7.6, { maxWidth: breite - 5 });
   }
 
-  y += 4;
+  y += 3;
 
-  // Prüfpunkte – Gruppen im 2-Spalten-Raster
-  doc.setFontSize(11);
-  doc.setTextColor(...accent);
-  doc.setFont('helvetica', 'bold');
-  seitenUmbruchPruefen(10);
-  doc.text('Prüfpunkte', rand, y);
-  y += 6;
+  // Trennlinie statt Überschrift "Prüfpunkte"
+  seitenUmbruchPruefen(6);
+  doc.setDrawColor(...accent);
+  doc.setLineWidth(0.5);
+  doc.line(rand, y, seitenBreite - rand, y);
+  y += 5;
 
   const spaltenAnzahl = 2;
-  const boxAbstand = 5;
+  const boxAbstand = 2.5;
   const boxBreite = (nutzbreite - boxAbstand) / spaltenAnzahl;
+  const kaestchenGroesse = 3.4;
   let spaltenY = [y, y];
 
   GRUPPEN.forEach(gruppe => {
@@ -961,7 +968,7 @@ function pdfExportieren(d) {
     let boxY = spaltenY[zielSpalte];
 
     const anzahlZeilen = gruppe.optionen.length + (gruppe.zusatz ? 1 : 0);
-    const boxHoehe = 10 + anzahlZeilen * 5.2 + 4;
+    const boxHoehe = 7 + anzahlZeilen * 5 + 2;
 
     if (boxY + boxHoehe > 287) {
       doc.addPage();
@@ -969,33 +976,50 @@ function pdfExportieren(d) {
       boxY = rand;
     }
 
-    doc.setDrawColor(200, 200, 200);
+    doc.setDrawColor(190, 190, 190);
     doc.setLineWidth(0.3);
     doc.roundedRect(x, boxY, boxBreite, boxHoehe, 1.5, 1.5);
 
-    let innerY = boxY + 6;
+    let innerY = boxY + 4.5;
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
     doc.setTextColor(40, 40, 40);
-    doc.text(gruppe.titel, x + 4, innerY);
-    innerY += 5.5;
+    doc.text(gruppe.titel, x + 3, innerY);
+    innerY += 5;
 
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.5);
     const ausgewaehlt = d[gruppe.key] || [];
     gruppe.optionen.forEach(opt => {
       const angehakt = ausgewaehlt.includes(opt);
-      doc.setTextColor(angehakt ? 20 : 140, angehakt ? 20 : 140, angehakt ? 20 : 140);
-      doc.text((angehakt ? '☑ ' : '☐ ') + opt, x + 4, innerY);
-      innerY += 5.2;
+      const kx = x + 3;
+      const ky = innerY - kaestchenGroesse + 0.8;
+
+      // Kästchen zeichnen
+      doc.setDrawColor(60, 60, 60);
+      doc.setLineWidth(0.3);
+      doc.rect(kx, ky, kaestchenGroesse, kaestchenGroesse);
+
+      // Häkchen bei ausgewählten Optionen
+      if (angehakt) {
+        doc.setDrawColor(...accent);
+        doc.setLineWidth(0.6);
+        doc.line(kx + 0.5, ky + kaestchenGroesse * 0.55, kx + kaestchenGroesse * 0.4, ky + kaestchenGroesse - 0.4);
+        doc.line(kx + kaestchenGroesse * 0.4, ky + kaestchenGroesse - 0.4, kx + kaestchenGroesse - 0.3, ky + 0.4);
+      }
+
+      doc.setFont('helvetica', angehakt ? 'bold' : 'normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(angehakt ? 20 : 90, angehakt ? 20 : 90, angehakt ? 20 : 90);
+      doc.text(opt, kx + kaestchenGroesse + 2, innerY);
+      innerY += 5;
     });
 
     if (gruppe.zusatz) {
       const werte = gruppe.zusatz.map((feld, i) => gruppe.zusatzLabel[i] + ': ' + (d[feld] || '–'));
+      doc.setFont('helvetica', 'normal');
       doc.setFontSize(7.8);
       doc.setTextColor(80, 80, 80);
-      doc.text(werte.join('   '), x + 4, innerY, { maxWidth: boxBreite - 8 });
-      innerY += 5.2;
+      doc.text(werte.join('   '), x + 3, innerY, { maxWidth: boxBreite - 6 });
+      innerY += 4.6;
     }
 
     spaltenY[zielSpalte] = boxY + boxHoehe + boxAbstand;

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hydranten-v1';
+const CACHE_NAME = 'hydranten-v2';
 const FILES = [
   './hydranten_pruefung.html',
   './manifest.json',
@@ -7,7 +7,9 @@ const FILES = [
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(FILES))
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(FILES))
+      .catch(() => {})
   );
   self.skipWaiting();
 });
@@ -22,7 +24,21 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
+  if (event.request.method !== 'GET') return;
+
   event.respondWith(
-    caches.match(event.request).then(cached => cached || fetch(event.request))
+    caches.match(event.request).then(cached => {
+      const networkFetch = fetch(event.request)
+        .then(response => {
+          if (response && response.ok) {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseClone));
+          }
+          return response;
+        })
+        .catch(() => cached);
+
+      return cached ? Promise.race([cached, networkFetch]) : networkFetch;
+    })
   );
 });

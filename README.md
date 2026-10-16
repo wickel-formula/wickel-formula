@@ -1,6 +1,6 @@
 ## Formularsammlung
 ## Stand: 06.10.2026 16.55
 
-[Formular Hydrantenprüfung](./hydranten_pruefung.html)
+[Formular Hydrantenprüfung](./Hydranten-_und_Schieberpruefung_.html)
 
-[Auswertung Hydrantenprüfung (für PC)](./hydranten_auswertung.html)
+[Auswertung Hydrantenprüfung (für PC)](./Hydranten-_und_Schieberauswertung.html)
